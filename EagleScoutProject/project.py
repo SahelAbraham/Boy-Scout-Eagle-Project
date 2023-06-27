@@ -1,24 +1,36 @@
 import gmplot
 import csv
+import os
 
-latitude_list = []
-longitude_list = []
+path = "C://Users//abrah//Desktop//Project//Data" #path where data is stored
 
-with open('latitudes.csv', newline = '') as f:
-    for row in csv.reader(f):
-        latitude_list.append(float(row[0]))
-
-with open('longitudes.csv', newline= '') as f:
-    for row in csv.reader(f):
-        longitude_list.append(float(row[0]))
-
-print(latitude_list)
-print(longitude_list)
+dir_list = os.listdir(path)
 
 gmap1 = gmplot.GoogleMapPlotter.from_geocode("Bridgewater, New Jersey, United States", 15, apikey = 'AIzaSyALPKrX7n5tLMsi0M74X4QY8ppDIEIeSYM')
-#gmplot.GoogleMapPlotter(30.3164945, 78.03219179999999, 12, apikey= 'AIzaSyALPKrX7n5tLMsi0M74X4QY8ppDIEIeSYM')
 
-gmap1.scatter( latitude_list, longitude_list, '#FF0000', size = 1, marker = True )
+count = 0 #counter to iterate through colors
+
+color_list = ['blue', 'red', 'purple', 'green', 'orange', 'yellow'] #each color represents different infrastructure piece
+
+for i in dir_list: #goes through every file in the directory and plots the points given, with the name of the file as the name of each point
+    with open(path + '//' + i) as f:
+        coordinates = []
+        for line in f:
+            line = line.split()
+            if line:           
+                line = [float(i) for i in line]
+                coordinates.append(line)
+
+    coordinates = zip(*coordinates)
+
+    gmap1.scatter(
+         *coordinates,
+         color = color_list[count],
+         size = 1,
+         marker = True, 
+         title = i[:i.index(".")]
+         )
+    count+=1
 
 gmap1.draw("C:\\Users\\abrah\\Desktop\\map.html")
 
