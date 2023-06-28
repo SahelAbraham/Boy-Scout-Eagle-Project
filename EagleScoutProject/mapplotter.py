@@ -1,36 +1,33 @@
 import gmplot
 import csv
 import os
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
-path = "C://Users//abrah//Desktop//Project//Data" #path where data is stored
 
-dir_list = os.listdir(path)
-
+uri = "mongodb+srv://EagleScout2:KEeIYE07Bj62U0KY@dpwcluster.fkjzh59.mongodb.net/?retryWrites=true&w=majority"
 gmap1 = gmplot.GoogleMapPlotter.from_geocode("Bridgewater, New Jersey, United States", 15, apikey = 'AIzaSyALPKrX7n5tLMsi0M74X4QY8ppDIEIeSYM')
 
-count = 0 #counter to iterate through colors
+client = MongoClient(uri, server_api=ServerApi('1')) # Create a new client and connect to the server
 
-color_list = ['blue', 'red', 'purple', 'green', 'orange', 'yellow'] #each color represents different infrastructure piece
+database = client.Infrastructure_Data
+coll = database.Stop_Signs
+numDocs = coll.count_documents({})
+coordinates = []
+coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
+coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
+print(coordinates)
 
-for i in dir_list: #goes through every file in the directory and plots the points given, with the name of the file as the name of each point
-    with open(path + '//' + i) as f:
-        coordinates = []
-        for line in f:
-            line = line.split()
-            if line:           
-                line = [float(i) for i in line]
-                coordinates.append(line)
 
-    coordinates = zip(*coordinates)
+client.close()
 
-    gmap1.scatter(
-         *coordinates,
-         color = color_list[count],
-         size = 1,
-         marker = True, 
-         title = i[:i.index(".")]
-         )
-    count+=1
+gmap1.scatter(
+    *coordinates,
+    color = 'blue',
+    size = 1,
+    marker = True, 
+    title = 'Stop Sign'
+)
 
 gmap1.draw("C:\\Users\\abrah\\Desktop\\map.html")
 
