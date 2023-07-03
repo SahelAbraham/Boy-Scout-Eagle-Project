@@ -25,17 +25,20 @@ client.close()
 APP_TITLE = 'Infrastructure Map'
 APP_SUB_TITLE = 'For the Bridgewater Township'
 
+
+@st.cache_data(experimental_allow_widgets=True)
 def display_map():
     map = folium.Map(
         location = [40.5940, -74.6049],
-        zoom_start = 15
+        zoom_start = 14,
+        scrollWheelZoom = False,
+        tiles= 'cartodbpositron'
     )
     st_map = st_folium(
         fig = map,
         height = 700,
         width = 1100
     )
-    
 
 def main():
     st.set_page_config(APP_TITLE)
