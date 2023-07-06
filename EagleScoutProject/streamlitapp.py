@@ -27,11 +27,9 @@ StormwaterDrainPoints = pd.DataFrame({
     'lat': StormwaterDrains[0]
 }, dtype=str)
 
-print(StormwaterDrains)
 client.close()
 
 APP_TITLE = 'Infrastructure Map'
-APP_SUB_TITLE = 'For the Bridgewater Township'
 
 
 def display_map():
@@ -54,24 +52,28 @@ def display_map():
         width = 1100
     )
 
-s3 = boto3.resource('s3')
+s3 = boto3.client(
+    service_name = 's3',
+    region_name = 'us-east-1',
+    aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
+    aws_secret_access_key = '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'
+)
 
 def main():
     st.set_page_config(APP_TITLE)
-    st.title(':blue[Infrastructure Map]')
-    st.subheader(APP_SUB_TITLE)
-    file = st.file_uploader(
+    st.title(':blue[Map of Infrastructure in the Bridgewater Township]')
+    with st.form("myform", clear_on_submit=True):
+        file = st.file_uploader(
         label = 'UPLOAD PHOTOS HERE',
         accept_multiple_files = False,
         help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
-    )
-    if file is not None:
-        file_details = {"Filename":file.name,"FileType":file.type,"FileSize":file.size}
-        st.write(file_details)
+        )
+        submitted = st.form_submit_button("Upload file")
+    if submitted and file is not None:
         with open(os.path.join('c://Users//abrah//Desktop//Project//EagleScoutProject',file.name), 'wb') as f:
             f.write(file.getbuffer())
-        s3.meta.client.upload_file('c://Users//abrah//Desktop//Project//EagleScoutProject//IMG_2801.jpg', 'esfilestorage', file.name)
-        st.success("Saved File")
+        s3.upload_file('c://Users//abrah//Desktop//Project//EagleScoutProject//IMG_2801.jpg', 'esfilestorage', file.name)
+        st.success("Succesfully uploaded file")
     st.button(
         label = 'Refresh Map',
         type = 'primary',
