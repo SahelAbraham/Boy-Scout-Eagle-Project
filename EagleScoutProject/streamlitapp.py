@@ -5,6 +5,7 @@ import os
 import boto3
 import string
 import random
+import tempfile
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from streamlit_folium import st_folium
@@ -46,7 +47,7 @@ def display_map():
             radius = 2,
             color = 'blue',
             tooltip = 'Stop Sign',
-            popup = ('Stop Sign' + '\nlatitude:' + StormwaterDrainPoints.iloc[i]['lat'] + '\nlongitude:' + StormwaterDrainPoints.iloc[i]['lon'])
+            popup = ('Stormwater Drain' + '\nlatitude:' + StormwaterDrainPoints.iloc[i]['lat'] + '\nlongitude:' + StormwaterDrainPoints.iloc[i]['lon'])
         ).add_to(map)
     st_map = st_folium(
         fig = map,
@@ -54,12 +55,15 @@ def display_map():
         width = 1100
     )
 
-s3 = boto3.client(
-    service_name = 's3',
-    region_name = 'us-east-1',
-    aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
-    aws_secret_access_key = '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'
-)
+@st.cache_data
+def set_aws_client():
+    global s3 
+    s3 = boto3.client(
+        service_name = 's3',
+        region_name = 'us-east-1',
+        aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
+        aws_secret_access_key = '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'
+    )
 
 def main():
     st.set_page_config(APP_TITLE)
@@ -81,18 +85,21 @@ def main():
     if submitted and infratype == 'None':
         st.error("Please select the type of infrastructure in the image")
     if submitted and file is not None and infratype != 'None':
-        if infratype is 'Stormwater Drain':
+        if infratype == 'Stormwater Drain':
             file.name = 'STRM' + ''.join(random.choice(characters) for i in range(25)) + '.jpg'
-        with open(os.path.join('c://Users//abrah//Desktop//Project//',file.name), 'wb') as f:
-            f.write(file.getbuffer())
-        with open('c://Users//abrah//Desktop//Project//' + file.name, 'rb') as src:
-            img = Image(src)
         
-        if not img.has_exif:
-            st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
-        else:
-            s3.upload_file('c://Users//abrah//Desktop//Project//' + file.name, 'esfilestorage', file.name)
-            st.success("Succesfully uploaded file")
+        with tempfile.TemporaryDirectory() as destination:
+            with open(os.path.join(destination,file.name), 'wb') as f:
+                f.write(file.getbuffer())
+            with open(destination + "\\" + file.name, 'rb') as src:
+                img = Image(src)
+            st.write(img)
+            if not img.has_exif:
+                st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
+            else:
+                set_aws_client()
+                s3.upload_file(destination + "\\" + file.name, 'esfilestorage', file.name)
+                st.success("Succesfully uploaded file")
     display_map()
         
 
