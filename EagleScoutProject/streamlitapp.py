@@ -3,18 +3,20 @@ import folium
 import pandas as pd
 import os
 import boto3
-from PIL import Image
+import string
+import random
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from streamlit_folium import st_folium
+from exif import Image
 
 uri = "mongodb+srv://EagleScout2:KEeIYE07Bj62U0KY@dpwcluster.fkjzh59.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
+characters = string.ascii_letters + string.digits
 
 def getCoords(collection):
     database = client.Infrastructure_Data
     coll = eval(collection)
-    numDocs = coll.count_documents({})
     coordinates = []
     coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
     coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
@@ -68,16 +70,29 @@ def main():
         accept_multiple_files = False,
         help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
         )
+        infratype = st.selectbox(
+            label = 'Please select the type of infrastructure in the image',
+            options = ('None', 'Stormwater Drain'),
+            help = 'Some infrastructure types may not exist in the database yet'
+        )
         submitted = st.form_submit_button("Upload file")
-    if submitted and file is not None:
-        with open(os.path.join('c://Users//abrah//Desktop//Project//EagleScoutProject',file.name), 'wb') as f:
+    if submitted and file is None:
+        st.error("Please submit a file")
+    if submitted and infratype == 'None':
+        st.error("Please select the type of infrastructure in the image")
+    if submitted and file is not None and infratype != 'None':
+        if infratype is 'Stormwater Drain':
+            file.name = 'STRM' + ''.join(random.choice(characters) for i in range(25)) + '.jpg'
+        with open(os.path.join('c://Users//abrah//Desktop//Project//',file.name), 'wb') as f:
             f.write(file.getbuffer())
-        s3.upload_file('c://Users//abrah//Desktop//Project//EagleScoutProject//IMG_2801.jpg', 'esfilestorage', file.name)
-        st.success("Succesfully uploaded file")
-    st.button(
-        label = 'Refresh Map',
-        type = 'primary',
-    )
+        with open('c://Users//abrah//Desktop//Project//' + file.name, 'rb') as src:
+            img = Image(src)
+        
+        if not img.has_exif:
+            st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
+        else:
+            s3.upload_file('c://Users//abrah//Desktop//Project//' + file.name, 'esfilestorage', file.name)
+            st.success("Succesfully uploaded file")
     display_map()
         
 
