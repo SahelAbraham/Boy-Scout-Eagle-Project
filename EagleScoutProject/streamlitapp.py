@@ -6,10 +6,10 @@ import boto3
 import string
 import random
 import tempfile
+import exifread
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from streamlit_folium import st_folium
-from exif import Image
 
 uri = "mongodb+srv://EagleScout2:KEeIYE07Bj62U0KY@dpwcluster.fkjzh59.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -60,39 +60,44 @@ def display_map():
         height = 700,
         width = 1100
     )
-def main():
-    st.set_page_config(APP_TITLE)
-    st.title(':blue[Map of Infrastructure in the Bridgewater Township]')
-    with st.form("myform", clear_on_submit=True):
-        file = st.file_uploader(
-        label = 'UPLOAD PHOTOS HERE',
-        accept_multiple_files = False,
-        help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
-        )
-        infratype = st.selectbox(
-            label = 'Please select the type of infrastructure in the image',
-            options = ('None', 'Stormwater Drain'),
-            help = 'Some infrastructure types may not exist in the database yet'
-        )
-        submitted = st.form_submit_button("Upload file")
-    if submitted and file is None:
-        st.error("Please submit a file")
-    if submitted and infratype == 'None':
-        st.error("Please select the type of infrastructure in the image")
-    if submitted and file is not None and infratype != 'None':
-        if infratype == 'Stormwater Drain':
-            file.name = 'STRM' + ''.join(random.choice(characters) for i in range(25)) + '.jpg'
-        
+
+def fileUploader(file, infratype):
+    filetype = file.name.split('.')[-1]
+    if infratype == 'Stormwater Drain':
+        file.name = 'STRM' + ''.join(random.choice(characters) for i in range(25)) + '.' + filetype
         with tempfile.TemporaryDirectory() as destination:
             with open(os.path.join(destination,file.name), 'wb') as f:
                 f.write(file.getbuffer())
             with open(os.path.join(destination,file.name), 'rb') as src:
-                img = Image(src)
-            if not img.has_exif:
+                img = exifread.process_file(src)
+            if not img:
                 st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
             else:
                 s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
-                st.success("Succesfully uploaded file")
+                st.success("Succesfully uploaded file")    
+
+def main():
+    st.set_page_config(APP_TITLE)
+    st.title(':blue[Map of Infrastructure in the Bridgewater Township]')
+    with st.form("myform", clear_on_submit=True):
+        files = st.file_uploader(
+        label = 'UPLOAD PHOTOS HERE',
+        type = ['png', 'jpg', 'jpeg', 'TIFF', 'TIF', 'webp', 'heic'],
+        accept_multiple_files = False,
+        help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
+        )
+        infra = st.selectbox(
+            label = 'Please select the type of infrastructure in the image',
+            options = ('None', 'Stormwater Drain'),
+            help = 'Some infrastructure types may not exist in the database yet'
+        )
+        submitted = st.form_submit_button("Upload file(s)")
+    if submitted and files is None:
+        st.error("Please submit one or more files")
+    if submitted and infra == 'None':
+        st.error("Please select the type of infrastructure in the image")
+    if submitted and files is not None and infra != 'None':
+        fileUploader(files, infra)
     display_map()
         
 
