@@ -1,0 +1,7 @@
+streamlit
+folium
+pandas
+boto3
+pymongo
+streamlit_folium
+exif
