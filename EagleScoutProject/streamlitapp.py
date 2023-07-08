@@ -34,6 +34,12 @@ client.close()
 
 APP_TITLE = 'Infrastructure Map'
 
+s3 = boto3.client(
+        service_name = 's3',
+        region_name = 'us-east-1',
+        aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
+        aws_secret_access_key = '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'
+    )
 
 def display_map():
     map = folium.Map(
@@ -54,17 +60,6 @@ def display_map():
         height = 700,
         width = 1100
     )
-
-@st.cache_data
-def set_aws_client():
-    global s3 
-    s3 = boto3.client(
-        service_name = 's3',
-        region_name = 'us-east-1',
-        aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
-        aws_secret_access_key = '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'
-    )
-
 def main():
     st.set_page_config(APP_TITLE)
     st.title(':blue[Map of Infrastructure in the Bridgewater Township]')
@@ -91,14 +86,12 @@ def main():
         with tempfile.TemporaryDirectory() as destination:
             with open(os.path.join(destination,file.name), 'wb') as f:
                 f.write(file.getbuffer())
-            with open(destination + "\\" + file.name, 'rb') as src:
+            with open(os.path.join(destination,file.name), 'rb') as src:
                 img = Image(src)
-            st.write(img)
             if not img.has_exif:
                 st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
             else:
-                set_aws_client()
-                s3.upload_file(destination + "\\" + file.name, 'esfilestorage', file.name)
+                s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
                 st.success("Succesfully uploaded file")
     display_map()
         
