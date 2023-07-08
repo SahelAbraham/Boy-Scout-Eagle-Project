@@ -7,9 +7,28 @@ import string
 import random
 import tempfile
 import exifread
+import logging as logger
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from streamlit_folium import st_folium
+
+def _monkey_patch_exifread():
+    from exifread import HEICExifFinder
+    from exifread.heic import NoParser
+
+    _old_get_parser = HEICExifFinder.get_parser
+
+    def _get_parser(self, box):
+        try:
+            return _old_get_parser(self, box)
+        except NoParser:
+            logger.warning("ignoring parser %s", box.name)
+            return None
+
+    HEICExifFinder.get_parser = _get_parser
+
+
+_monkey_patch_exifread()
 
 uri = "mongodb+srv://EagleScout2:KEeIYE07Bj62U0KY@dpwcluster.fkjzh59.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
