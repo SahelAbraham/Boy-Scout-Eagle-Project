@@ -12,6 +12,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from streamlit_folium import st_folium
 
+#patch used to fix exifread, as the library is broken
 def _monkey_patch_exifread():
     from exifread import HEICExifFinder
     from exifread.heic import NoParser
@@ -74,26 +75,31 @@ def display_map():
             tooltip = 'Stop Sign',
             popup = ('Stormwater Drain' + '\nlatitude:' + StormwaterDrainPoints.iloc[i]['lat'] + '\nlongitude:' + StormwaterDrainPoints.iloc[i]['lon'])
         ).add_to(map)
-    st_map = st_folium(
+    st_map = st_folium(                                                                                                                                  
         fig = map,
         height = 700,
         width = 1100
     )
 
+def generateName():
+    return ''.join(random.choice(characters) for i in range(25)) + '.'
+
 def fileUploader(file, infratype):
     filetype = file.name.split('.')[-1]
     if infratype == 'Stormwater Drain':
-        file.name = 'STRM' + ''.join(random.choice(characters) for i in range(25)) + '.' + filetype
-        with tempfile.TemporaryDirectory() as destination:
-            with open(os.path.join(destination,file.name), 'wb') as f:
-                f.write(file.getbuffer())
-            with open(os.path.join(destination,file.name), 'rb') as src:
-                img = exifread.process_file(src)
-            if not img:
-                st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
-            else:
-                s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
-                st.success("Succesfully uploaded file")    
+        file.name = 'STRM' + generateName() + filetype
+    if infratype == 'TEST':
+        file.name = 'TEST' + generateName() + filetype
+    with tempfile.TemporaryDirectory() as destination:
+        with open(os.path.join(destination,file.name), 'wb') as f:
+            f.write(file.getbuffer())
+        with open(os.path.join(destination,file.name), 'rb') as src:
+            img = exifread.process_file(src)
+        if not img:
+            st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
+        else:
+            s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
+            st.success("Succesfully uploaded file")    
 
 def main():
     st.set_page_config(APP_TITLE)
@@ -107,7 +113,7 @@ def main():
         )
         infra = st.selectbox(
             label = 'Please select the type of infrastructure in the image',
-            options = ('None', 'Stormwater Drain'),
+            options = ('None', 'Stormwater Drain', 'TEST'),
             help = 'Some infrastructure types may not exist in the database yet'
         )
         submitted = st.form_submit_button("Upload file(s)")
