@@ -111,7 +111,7 @@ def main():
     with st.form("myform", clear_on_submit=True):
         files = st.file_uploader(
         label = 'UPLOAD PHOTOS HERE',
-        type = ['png', 'jpg', 'jpeg', 'TIFF', 'TIF', 'webp', 'heic'],
+        type = ['png', 'jpg', 'jpeg', 'webp', 'heic'],
         accept_multiple_files = False,
         help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
         )
