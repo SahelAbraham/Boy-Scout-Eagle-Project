@@ -44,6 +44,9 @@ def getCoords(collection):
     return coordinates
 
 StormwaterDrains = getCoords('database.Stormwater_Drains')
+print(StormwaterDrains)
+StormwaterDrains = list(filter(None, StormwaterDrains))
+print(StormwaterDrains)
 
 StormwaterDrainPoints = pd.DataFrame({
     'lon': StormwaterDrains[1],
@@ -99,6 +102,7 @@ def fileUploader(file, infratype):
             st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
         else:
             s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
+            s3.close()
             st.success("Succesfully uploaded file")    
 
 def main():
@@ -111,7 +115,7 @@ def main():
         accept_multiple_files = False,
         help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
         )
-        infra = st.selectbox(
+        infra = st.selectbox(   
             label = 'Please select the type of infrastructure in the image',
             options = ('None', 'Stormwater Drain', 'TEST'),
             help = 'Some infrastructure types may not exist in the database yet'
