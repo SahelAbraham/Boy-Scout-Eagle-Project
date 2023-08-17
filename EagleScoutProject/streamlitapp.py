@@ -39,19 +39,23 @@ def getCoords(collection):
     database = client.Infrastructure_Data
     coll = eval(collection)
     coordinates = []
-    coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
-    coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
+    coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}))#.distinct('Latitude'))
+    coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}))#.distinct('Longitude'))
     return coordinates
 
 StormwaterDrains = getCoords('database.Stormwater_Drains')
 print(StormwaterDrains)
-StormwaterDrains = list(filter(None, StormwaterDrains))
-print(StormwaterDrains)
+
+#list1 = [1.2]
+#list2 = [2.2]
+#temp = [list1, list2]
 
 StormwaterDrainPoints = pd.DataFrame({
     'lon': StormwaterDrains[1],
     'lat': StormwaterDrains[0]
 }, dtype=str)
+
+print(StormwaterDrainPoints)
 
 client.close()
 
@@ -63,6 +67,57 @@ s3 = boto3.client(
         aws_access_key_id = 'AKIAWDDMU6ABRGHZSOMD',
         aws_secret_access_key = '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'
     )
+
+# START OF EXIF DATA VERIFICATION
+def _get_if_exist(data, key):
+    if key in data:
+        return data[key]
+
+    return None
+
+
+def _convert_to_degress(value):
+    """
+    Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
+    :param value:
+    :type value: exifread.utils.Ratio
+    :rtype: float
+    """
+    d = float(value.values[0].num) / float(value.values[0].den)
+    m = float(value.values[1].num) / float(value.values[1].den)
+    s = float(value.values[2].num) / float(value.values[2].den)
+
+    return d + (m / 60.0) + (s / 3600.0)
+
+def get_exif_location(exif_data):
+    """
+    Returns the latitude and longitude, if available, from the provided exif_data (obtained through get_exif_data above)
+    """
+    lat = None
+    lon = None
+
+    gps_latitude = _get_if_exist(exif_data, 'GPS GPSLatitude')
+    gps_latitude_ref = _get_if_exist(exif_data, 'GPS GPSLatitudeRef')
+    gps_longitude = _get_if_exist(exif_data, 'GPS GPSLongitude')
+    gps_longitude_ref = _get_if_exist(exif_data, 'GPS GPSLongitudeRef')
+
+    if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+        lat = _convert_to_degress(gps_latitude)
+        if gps_latitude_ref.values[0] != 'N':
+            lat = 0 - lat
+
+        lon = _convert_to_degress(gps_longitude)
+        if gps_longitude_ref.values[0] != 'E':
+            lon = 0 - lon
+
+    return lat, lon
+
+def get_exif_data(image_file):
+    with open(image_file, 'rb') as f:
+        exif_tags = exifread.process_file(f)
+    return exif_tags 
+
+#END OF EXIF DATA VERIFICATION 
 
 def display_map():
     map = folium.Map(
@@ -96,9 +151,10 @@ def fileUploader(file, infratype):
     with tempfile.TemporaryDirectory() as destination:
         with open(os.path.join(destination,file.name), 'wb') as f:
             f.write(file.getbuffer())
-        with open(os.path.join(destination,file.name), 'rb') as src:
-            img = exifread.process_file(src)
-        if not img:
+        #with open(os.path.join(destination,file.name), 'rb') as src:
+            #img = exifread.process_file(src)
+        lat, long = get_exif_location(get_exif_data(os.path.join(destination,file.name)))
+        if lat == None or long == None:
             st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
         else:
             s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
