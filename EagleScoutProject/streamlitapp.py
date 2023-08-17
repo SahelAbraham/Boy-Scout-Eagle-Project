@@ -130,7 +130,7 @@ def display_map():
             location = [StormwaterDrainPoints.iloc[i]['lat'], StormwaterDrainPoints.iloc[i]['lon']],
             radius = 2,
             color = 'blue',
-            tooltip = 'Stop Sign',
+            tooltip = 'Stormwater Drain',
             popup = ('Stormwater Drain' + '\nlatitude:' + StormwaterDrainPoints.iloc[i]['lat'] + '\nlongitude:' + StormwaterDrainPoints.iloc[i]['lon'])
         ).add_to(map)
     st_map = st_folium(                                                                                                                                  
