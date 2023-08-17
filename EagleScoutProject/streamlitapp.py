@@ -39,8 +39,8 @@ def getCoords(collection):
     database = client.Infrastructure_Data
     coll = eval(collection)
     coordinates = []
-    coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}))#.distinct('Latitude'))
-    coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}))#.distinct('Longitude'))
+    coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
+    coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
     return coordinates
 
 StormwaterDrains = getCoords('database.Stormwater_Drains')
