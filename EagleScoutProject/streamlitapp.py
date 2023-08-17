@@ -154,6 +154,8 @@ def fileUploader(file, infratype):
         #with open(os.path.join(destination,file.name), 'rb') as src:
             #img = exifread.process_file(src)
         lat, long = get_exif_location(get_exif_data(os.path.join(destination,file.name)))
+        st.write(lat)
+        st.write(long)
         if lat == None or long == None:
             st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
         else:
