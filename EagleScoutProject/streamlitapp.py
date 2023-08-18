@@ -51,8 +51,8 @@ list2 = [2.2]
 temp = [list1, list2]
 
 StormwaterDrainPoints = pd.DataFrame({
-    'lon': StormwaterDrains[1],
-    'lat': StormwaterDrains[0]
+    'lon': temp[1],
+    'lat': temp[0]
 }, dtype=str)
 
 print(StormwaterDrainPoints)
