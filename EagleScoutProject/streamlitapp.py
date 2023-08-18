@@ -46,9 +46,9 @@ def getCoords(collection):
 StormwaterDrains = getCoords('database.Stormwater_Drains')
 print(StormwaterDrains)
 
-#list1 = [1.2]
-#list2 = [2.2]
-#temp = [list1, list2]
+list1 = [1.2]
+list2 = [2.2]
+temp = [list1, list2]
 
 StormwaterDrainPoints = pd.DataFrame({
     'lon': StormwaterDrains[1],
@@ -151,17 +151,17 @@ def fileUploader(file, infratype):
     with tempfile.TemporaryDirectory() as destination:
         with open(os.path.join(destination,file.name), 'wb') as f:
             f.write(file.getbuffer())
-        #with open(os.path.join(destination,file.name), 'rb') as src:
-            #img = exifread.process_file(src)
         lat, long = get_exif_location(get_exif_data(os.path.join(destination,file.name)))
-        st.write(lat)
-        st.write(long)
         if lat == None or long == None:
-            st.error("This image has no EXIF data, please turn on location services for the camera app before taking pictures to upload")
+            st.error("This image has no exif data, please make sure to turn on location services for the camera app before taking photos to upload")
+        elif lat in StormwaterDrains[0] and long in StormwaterDrains[1]:
+            st.error("This image of a " + infratype + " has already been uploaded to the database")
+        elif lat in StormwaterDrains[0] or long in StormwaterDrains[1]:
+            st.error("Please try taking this photo from a different angle, and reuploading it to the site")
         else:
             s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
             s3.close()
-            st.success("Succesfully uploaded file")    
+            st.success("Image has been successfully uploaded to the database!")  
 
 def main():
     st.set_page_config(APP_TITLE)
