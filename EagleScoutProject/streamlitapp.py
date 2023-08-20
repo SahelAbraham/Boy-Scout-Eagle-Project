@@ -23,7 +23,7 @@ def _monkey_patch_exifread():
         try:
             return _old_get_parser(self, box)
         except NoParser:
-            logger.warning("ignoring parser %s", box.name)
+            #logger.warning("ignoring parser %s", box.name)
             return None
 
     HEICExifFinder.get_parser = _get_parser
@@ -38,21 +38,34 @@ characters = string.ascii_letters + string.digits
 def getCoords(collection):
     database = client.Infrastructure_Data
     coll = eval(collection)
+    lats = []
+    longs = []
+    latcursor = coll.find({}, {'Latitude': 1, '_id': 0})
+    for row in latcursor:
+        for value in row.values():
+            lats.append(value)
+    #coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
+    #coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
+    longcursor = coll.find({}, {'Longitude': 1, '_id': 0})
+    for row in longcursor:
+        for value in row.values():
+            longs.append(value)
     coordinates = []
-    coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
-    coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
+    coordinates.append(lats)
+    coordinates.append(longs)
     return coordinates
 
 StormwaterDrains = getCoords('database.Stormwater_Drains')
-print(StormwaterDrains)
+print(str(len(StormwaterDrains[0])) + " latitudes")
+print(str(len(StormwaterDrains[1])) + " longitudes")
 
 list1 = [1.2]
 list2 = [2.2]
 temp = [list1, list2]
 
 StormwaterDrainPoints = pd.DataFrame({
-    'lon': temp[1],
-    'lat': temp[0]
+    'lat': StormwaterDrains[0],
+    'lon': StormwaterDrains[1]
 }, dtype=str)
 
 print(StormwaterDrainPoints)
@@ -142,26 +155,37 @@ def display_map():
 def generateName():
     return ''.join(random.choice(characters) for i in range(25)) + '.'
 
-def fileUploader(file, infratype):
+def fileUploader(file, infratype, n):
+    orgname = file.name
     filetype = file.name.split('.')[-1]
     if infratype == 'Stormwater Drain':
         file.name = 'STRM' + generateName() + filetype
     if infratype == 'TEST':
         file.name = 'TEST' + generateName() + filetype
+    upload = True
     with tempfile.TemporaryDirectory() as destination:
         with open(os.path.join(destination,file.name), 'wb') as f:
             f.write(file.getbuffer())
         lat, long = get_exif_location(get_exif_data(os.path.join(destination,file.name)))
         if lat == None or long == None:
             st.error("This image has no exif data, please make sure to turn on location services for the camera app before taking photos to upload")
+            upload = False
         elif lat in StormwaterDrains[0] and long in StormwaterDrains[1]:
-            st.error("This image of a " + infratype + " has already been uploaded to the database")
+            st.write("Duplicate image detected")
+            upload = False
+            print(file.name)
         elif lat in StormwaterDrains[0] or long in StormwaterDrains[1]:
-            st.error("Please try taking this photo from a different angle, and reuploading it to the site")
-        else:
+            st.write("Please retake this picture at a different angle")
+            upload = False
+        if upload == True:
             s3.upload_file(os.path.join(destination,file.name), 'esfilestorage', file.name)
             s3.close()
-            st.success("Image has been successfully uploaded to the database!")  
+            print("Finished")
+            if n % 10 == 0:
+                print(str(n) + " images have been uploaded")
+            #st.success("Image has been successfully uploaded to the database!")
+        if upload == False:
+            print("Did not finish")  
 
 def main():
     st.set_page_config(APP_TITLE)
@@ -170,7 +194,7 @@ def main():
         files = st.file_uploader(
         label = 'UPLOAD PHOTOS HERE',
         type = ['png', 'jpg', 'jpeg', 'webp', 'heic'],
-        accept_multiple_files = False,
+        accept_multiple_files = True,
         help = 'Make sure you have location sharing enabled for your camera before taking pictures!',
         )
         infra = st.selectbox(   
@@ -182,9 +206,13 @@ def main():
     if submitted and files is None:
         st.error("Please submit one or more files")
     if submitted and infra == 'None':
-        st.error("Please select the type of infrastructure in the image")
+        st.error("Please selectZ the type of infrastructure in the image")
     if submitted and files is not None and infra != 'None':
-        fileUploader(files, infra)
+        n = 1
+        for file in files:
+            fileUploader(file, infra, n)
+            print("Starting")
+            n+=1
     display_map()
         
 
