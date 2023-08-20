@@ -44,8 +44,6 @@ def getCoords(collection):
     for row in latcursor:
         for value in row.values():
             lats.append(value)
-    #coordinates.append(coll.find({}, {'Latitude': 1, '_id':0}).distinct('Latitude'))
-    #coordinates.append(coll.find({}, {'Longitude': 1, '_id':0}).distinct('Longitude'))
     longcursor = coll.find({}, {'Longitude': 1, '_id': 0})
     for row in longcursor:
         for value in row.values():
